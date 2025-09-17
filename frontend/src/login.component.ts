@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -20,7 +21,7 @@ import { Router } from '@angular/router';
         <input type="password" formControlName="password" placeholder="••••••••" />
       </label>
 
-      <button type="submit" [disabled]="form.invalid">Entra</button>
+      <button type="submit" [disabled]="form.invalid">Registrati</button>
 
       <p *ngIf="error()"
          class="error">{{ error() }}</p>
@@ -35,24 +36,21 @@ import { Router } from '@angular/router';
     h1 { margin-bottom: 12px; }
   `]
 })
-export class LoginComponent {
-  error = signal<string | null>(null);
 
+export class LoginComponent {
   form = this.fb.group({
     username: ['', Validators.required],
-    password: ['', Validators.required],
+    password: ['', Validators.required]
   });
+  error = signal('');
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(private http: HttpClient, private fb: FormBuilder) {}
 
   onSubmit() {
-    if (this.form.invalid) return;
-
-    // Per ora niente backend: fai finta che vada bene
-    // Se vuoi, metti una condizione fittizia:
-    // if (this.form.value.username !== 'demo' || this.form.value.password !== 'demo') { this.error.set('Credenziali non valide'); return; }
-
-    // “Login” riuscito ⇒ vai alla pagina preferenze
-    this.router.navigateByUrl('/preferenze');
+    const { username, password } = this.form.value;
+    this.http.post('/api/auth/register', { username, password }).subscribe({
+      next: () => alert('Registrazione avvenuta!'),
+      error: err => this.error.set(err.error)
+    });
   }
-}
+} 

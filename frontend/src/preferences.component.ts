@@ -11,10 +11,7 @@ import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
       <h1>Preferenze di viaggio</h1>
 
       <form [formGroup]="form" class="card" (ngSubmit)="salva()">
-        <label class="field">
-          <span class="label">Destinazione preferita</span>
-          <input class="input" formControlName="destinazione" placeholder="Roma, Parigi, ..." />
-        </label>
+      
 
         <div class="group">
           <div class="group-title">Scegli i tuoi interessi:</div>
@@ -135,7 +132,7 @@ export class PreferencesComponent {
   saved = signal(false);
 
   form = this.fb.group({
-    destinazione: this.fb.control<string>(''),
+    
     categorie: this.fb.control<string[]>([])
   });
 

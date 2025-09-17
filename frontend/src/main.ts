@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Routes, provideRouter, RouterLink, RouterOutlet } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
 import 'zone.js';
 
 
@@ -34,5 +35,5 @@ const routes: Routes = [
   { path: '**', redirectTo: '' },
 ];
 
-bootstrapApplication(AppComponent, { providers: [provideRouter(routes)] })
+bootstrapApplication(AppComponent, { providers: [provideHttpClient(), provideRouter(routes)] })
   .catch(err => console.error(err));
