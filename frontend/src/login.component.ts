@@ -2,11 +2,12 @@ import { Component, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common'; 
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [CommonModule,ReactiveFormsModule],
   template: `
     <h1>Accedi</h1>
 
@@ -23,8 +24,7 @@ import { HttpClient } from '@angular/common/http';
 
       <button type="submit" [disabled]="form.invalid">Registrati</button>
 
-      <p *ngIf="error()"
-         class="error">{{ error() }}</p>
+      <p *ngIf="error()" class="error">{{ error() }}</p>
     </form>
   `,
   styles: [`
@@ -36,7 +36,6 @@ import { HttpClient } from '@angular/common/http';
     h1 { margin-bottom: 12px; }
   `]
 })
-
 export class LoginComponent {
   form = this.fb.group({
     username: ['', Validators.required],
@@ -44,13 +43,36 @@ export class LoginComponent {
   });
   error = signal('');
 
-  constructor(private http: HttpClient, private fb: FormBuilder) {}
+  constructor(
+    private http: HttpClient,
+    private fb: FormBuilder,
+    private router: Router,           
+  ) {}
 
   onSubmit() {
+    this.error.set('');
     const { username, password } = this.form.value;
+
     this.http.post('/api/auth/register', { username, password }).subscribe({
-      next: () => alert('Registrazione avvenuta!'),
-      error: err => this.error.set(err.error)
+      next: () => {
+        const creds = btoa(`${username}:${password}`);
+        sessionStorage.setItem('basic', creds); 
+        // Salvataggio OK → vai alla pagina preferenze
+        this.router.navigate(['/preferenze'], { state: { username }});
+        localStorage.setItem('username', username!); 
+      },
+      error: (err) => {
+        // 409 dal backend → utente già esistente
+        if (err?.status === 409) {
+          this.error.set('utente già autenticato');
+          return;
+        }
+        // altrimenti prova a mostrare il messaggio ricevuto, o un fallback
+        const msg = typeof err?.error === 'string' && err.error.trim()
+          ? err.error
+          : 'Errore durante la registrazione. Riprova.';
+        this.error.set(msg);
+      }
     });
   }
-} 
+}

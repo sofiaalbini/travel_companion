@@ -1,14 +1,23 @@
 import { Component, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { RouterLink, RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
+
 
 @Component({
   selector: 'app-preferences',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule,RouterLink,RouterModule],
   template: `
     <section class="page">
       <h1>Preferenze di viaggio</h1>
+
+     <button type="button" (click)="logout()">Logout</button>
+
+
+
 
       <form [formGroup]="form" class="card" (ngSubmit)="salva()">
       
@@ -133,10 +142,12 @@ export class PreferencesComponent {
 
   form = this.fb.group({
     
-    categorie: this.fb.control<string[]>([])
+    preferenze: this.fb.control<string[]>([])
   });
 
-  constructor(private fb: FormBuilder) {
+  private username: string | null = null;  
+
+  constructor(private fb: FormBuilder , private http: HttpClient, private router: Router) { 
     // ripristina da localStorage se presente
     const raw = localStorage.getItem('tourmate_prefs');
     if (raw) {
@@ -144,6 +155,7 @@ export class PreferencesComponent {
         const parsed = JSON.parse(raw);
         this.form.patchValue(parsed, { emitEvent: false });
       } catch {}
+    this.username = (history.state && history.state.username) || localStorage.getItem('username'); 
     }
 
     // persistenza automatica ad ogni modifica
@@ -152,21 +164,53 @@ export class PreferencesComponent {
     });
   }
 
+   logout() {
+  sessionStorage.removeItem('basic');
+  localStorage.removeItem('username');
+  this.router.navigate(['/']);
+
+}
+
+
   isSelected(opt: string): boolean {
-    return (this.form.value.categorie ?? []).includes(opt);
+    return (this.form.value.preferenze ?? []).includes(opt);
   }
 
   toggle(opt: string) {
-    const current = [...(this.form.value.categorie ?? [])];
+    const current = [...(this.form.value.preferenze ?? [])];
     const i = current.indexOf(opt);
     if (i >= 0) current.splice(i, 1);
     else current.push(opt);
-    this.form.patchValue({ categorie: current });
+    this.form.patchValue({ preferenze: current });
+  } 
+  
+ 
+
+ salva() {
+  // opzionale: tieni il localStorage com’è
+  localStorage.setItem('tourmate_prefs', JSON.stringify(this.form.value));
+
+  if (!this.username) {
+    alert('Non riesco a identificare l’utente: rifai il login.');
+    return;
   }
 
-  salva() {
-    localStorage.setItem('tourmate_prefs', JSON.stringify(this.form.value));
-    this.saved.set(true);
-    setTimeout(() => this.saved.set(false), 1800);
-  }
+  const body = {
+    username: this.username,                                   // 👈 FK verso users
+    preferenze: this.form.value.preferenze ?? []               // 👈 campo tabella preferences
+  };
+
+  this.http.post('/api/preferences', body).subscribe({
+    next: () => {
+      this.saved.set(true);
+      setTimeout(() => this.saved.set(false), 1800);
+    },
+    error: (err) => {
+      console.error('Errore salvataggio preferenze', err);
+      alert('Errore nel salvataggio delle preferenze');
+    }
+  });
+}
+
+
 }
