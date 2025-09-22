@@ -15,7 +15,7 @@ import { AuthInterceptor } from './auth.interceptor';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
+  standalone: true,           
   imports: [RouterLink, RouterOutlet],
   template: `
  
