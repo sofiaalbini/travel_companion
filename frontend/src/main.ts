@@ -6,7 +6,7 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import 'zone.js';
 
 
-// importa i componenti (vedi sotto i file)
+// importa i componenti 
 import { LoginComponent } from './login.component';
 import { PreferencesComponent } from './preferences.component';
 

@@ -57,12 +57,12 @@ export class LoginComponent {
       next: () => {
         const creds = btoa(`${username}:${password}`);
         sessionStorage.setItem('basic', creds); 
-        // Salvataggio OK → vai alla pagina preferenze
+        // Salvataggio OK allora vai alla pagina preferenze
         this.router.navigate(['/preferenze'], { state: { username }});
         localStorage.setItem('username', username!); 
       },
       error: (err) => {
-        // 409 dal backend → utente già esistente
+        // 409 dal backend (utente già esistente)
         if (err?.status === 409) {
           this.error.set('utente già autenticato');
           return;
