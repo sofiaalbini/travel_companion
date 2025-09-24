@@ -16,10 +16,28 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import community.flock.eco.feature.user.repositories.UserAccountRepository;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Spring Security configuration class.
+ * Configures authentication, authorization rules, password encoding, and CORS
+ * settings.
+ */
 @Configuration
+@ConfigurationProperties(prefix = "cors")
 public class SecurityConfig {
+
+  private List<String> allowedOrigins = new ArrayList<>();
+
+  public void setAllowedOrigins(List<String> allowedOrigins) {
+    this.allowedOrigins = allowedOrigins;
+  }
 
   private final UserAccountRepository users;
 
@@ -27,29 +45,43 @@ public class SecurityConfig {
     this.users = users;
   }
 
+
+  /**
+   * Password encoder bean for hashing passwords.
+   *
+   * @return BCryptPasswordEncoder instance
+   */
   @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
 
-  // Come Spring trova l'utente nel DB per autenticare le richieste
+  /**
+   * Loads user details from the database for authentication.
+   *
+   * @return UserDetailsService to retrieve users
+   */
   @Bean
   UserDetailsService userDetailsService() {
     return username -> users.findById(username)
-      .map(u -> User.withUsername(u.getUsername())
-                    // usa il campo giusto della tua entity (es. getPasswordHash())
-                    .password(u.getPasswordHash())
-                    .roles("USER")
-                    .build())
-      .orElseThrow(() -> new UsernameNotFoundException("Utente non trovato: " + username));
+        .map(u -> User.withUsername(u.getUsername())
+            // use the correct field of your entity (e.g. getPasswordHash())
+            .password(u.getPasswordHash())
+            .roles("USER")
+            .build())
+        .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
   }
 
-  // CORS per l'SPA (modifica origin se diverso)
+  /**
+   * Configures CORS for the SPA frontend.
+   *
+   * @return CORS configuration source
+   */
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration cfg = new CorsConfiguration();
-    cfg.setAllowedOrigins(List.of("http://localhost:4200"));
-    cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+    cfg.setAllowedOrigins(allowedOrigins);
+    cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     cfg.setAllowedHeaders(List.of("*"));
     cfg.setAllowCredentials(true);
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -57,23 +89,30 @@ public class SecurityConfig {
     return source;
   }
 
+  /**
+   * Configures HTTP security: CORS, CSRF, endpoint authorization, and basic auth.
+   *
+   * @param http HttpSecurity object
+   * @return configured SecurityFilterChain
+   * @throws Exception on configuration errors
+   */
   @Bean
   SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http
-      .cors(Customizer.withDefaults())
-      // In dev, se usi Basic, puoi disabilitare CSRF.
-      // Se passi a sessioni/formLogin, valuta di riabilitarlo (CookieCsrfTokenRepository).
-      .csrf(csrf -> csrf.disable())
-      .authorizeHttpRequests(auth -> auth
-        // registrazione aperta
-        .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
-        // preferenze protette
-        .requestMatchers("/api/preferences/**").authenticated()
-        // tutto il resto aperto in dev (puoi restringere in seguito)
-        .anyRequest().permitAll()
-      )
-      // Autenticazione semplice per test e SPA
-      .httpBasic(Customizer.withDefaults());
+        .cors(Customizer.withDefaults())
+        // In dev, using Basic Auth: CSRF is disabled.
+        // For session/form login, consider enabling CSRF with
+        // CookieCsrfTokenRepository.
+        .csrf(csrf -> csrf.disable())
+        .authorizeHttpRequests(auth -> auth
+            // Registration endpoint is public
+            .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+            // Preferences endpoints require authentication
+            .requestMatchers("/api/preferences/**").authenticated()
+            // All other endpoints are open in development; restrict later if needed
+            .anyRequest().permitAll())
+        // Simple HTTP Basic authentication for SPA/dev testing
+        .httpBasic(Customizer.withDefaults());
 
     return http.build();
   }

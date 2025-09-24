@@ -3,7 +3,12 @@ package com.example.tourmate;
 
 import jakarta.persistence.*;
 
-@Entity @Table(name = "users")
+/**
+ * JPA entity representing a registered user.
+ * Stores username and BCrypt-hashed password in the "users" table.
+ */
+@Entity
+@Table(name = "users")
 public class UserAccount {
   @Id
   @Column(length = 50, nullable = false, unique = true)
@@ -12,12 +17,37 @@ public class UserAccount {
   @Column(nullable = false, name = "password_hash")
   private String passwordHash;
 
-  public UserAccount() {}
-  public UserAccount(String username, String passwordHash) {
-    this.username = username; this.passwordHash = passwordHash;
+
+   /**
+     * Default constructor required by JPA.
+     */
+  public UserAccount() {
   }
-  public String getUsername() { return username; }
-  public void setUsername(String username) { this.username = username; }
-  public String getPasswordHash() { return passwordHash; }
-  public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
+   /**
+     * Constructs a UserAccount with a username and hashed password.
+     *
+     * @param username unique username
+     * @param passwordHash BCrypt-hashed password
+     */
+  public UserAccount(String username, String passwordHash) {
+    this.username = username;
+    this.passwordHash = passwordHash;
+  }
+
+  public String getUsername() {
+    return username;
+  }
+
+  public void setUsername(String username) {
+    this.username = username;
+  }
+
+  public String getPasswordHash() {
+    return passwordHash;
+  }
+
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
 }
