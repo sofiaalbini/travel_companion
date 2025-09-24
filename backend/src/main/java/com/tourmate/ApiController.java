@@ -1,5 +1,5 @@
 // ApiController.java
-package com.example.tourmate;
+package com.tourmate;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -7,7 +7,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import community.flock.eco.feature.user.repositories.UserAccountRepository;
+// import community.flock.eco.feature.user.repositories.UserAccountRepository;
+import com.tourmate.repository.UserAccountRepository;
+import com.tourmate.repository.PreferenceRepository;
 
 import java.util.List;
 

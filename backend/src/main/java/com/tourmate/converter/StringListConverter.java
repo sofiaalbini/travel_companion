@@ -1,4 +1,4 @@
-package com.example.tourmate.converter;
+package com.tourmate.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
