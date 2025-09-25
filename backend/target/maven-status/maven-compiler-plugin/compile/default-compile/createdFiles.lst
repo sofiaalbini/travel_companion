@@ -1,0 +1,12 @@
+com\tourmate\entity\UserAccount.class
+com\tourmate\config\SecurityConfig.class
+com\tourmate\TourmateApplication.class
+com\tourmate\entity\Preference.class
+com\tourmate\repository\PreferenceRepository.class
+com\tourmate\controller\ApiController$RegisterRequest.class
+com\tourmate\service\TourmateService.class
+com\tourmate\controller\ApiController$PrefRequest.class
+com\tourmate\repository\UserAccountRepository.class
+com\tourmate\controller\ApiController.class
+com\tourmate\converter\StringListConverter.class
+com\tourmate\converter\StringListConverter$1.class

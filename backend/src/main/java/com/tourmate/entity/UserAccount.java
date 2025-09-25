@@ -1,5 +1,5 @@
 // UserAccount.java  --> tabella "users"
-package com.example.tourmate;
+package com.tourmate.entity;
 
 import jakarta.persistence.*;
 
@@ -17,19 +17,18 @@ public class UserAccount {
   @Column(nullable = false, name = "password_hash")
   private String passwordHash;
 
-
-   /**
-     * Default constructor required by JPA.
-     */
+  /**
+   * Default constructor required by JPA.
+   */
   public UserAccount() {
   }
 
-   /**
-     * Constructs a UserAccount with a username and hashed password.
-     *
-     * @param username unique username
-     * @param passwordHash BCrypt-hashed password
-     */
+  /**
+   * Constructs a UserAccount with a username and hashed password.
+   *
+   * @param username     unique username
+   * @param passwordHash BCrypt-hashed password
+   */
   public UserAccount(String username, String passwordHash) {
     this.username = username;
     this.passwordHash = passwordHash;

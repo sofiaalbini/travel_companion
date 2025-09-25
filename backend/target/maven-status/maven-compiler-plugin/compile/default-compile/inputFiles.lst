@@ -1,6 +1,9 @@
-D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\example\tourmate\ApiController.java
-D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\example\tourmate\Preference.java
-D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\example\tourmate\TourmateApplication.java
-D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\example\tourmate\UserAccount.java
-D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\example\tourmate\converter\StringListConverter.java
-D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\example\tourmate\SecurityConfig.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\repository\UserAccountRepository.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\entity\UserAccount.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\TourmateApplication.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\entity\Preference.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\config\SecurityConfig.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\converter\StringListConverter.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\controller\ApiController.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\repository\PreferenceRepository.java
+D:\Siena_Univer\DASS\project\code\git\travel_companion\backend\src\main\java\com\tourmate\service\TourmateService.java

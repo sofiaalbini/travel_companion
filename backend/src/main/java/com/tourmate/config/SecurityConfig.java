@@ -1,6 +1,6 @@
-// SecurityConfig.java
-package com.tourmate;
+package com.tourmate.config;
 
+import com.tourmate.service.TourmateService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,9 +16,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-// import community.flock.eco.feature.user.repositories.UserAccountRepository;
-import com.tourmate.repository.UserAccountRepository;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -26,8 +23,8 @@ import java.util.List;
 
 /**
  * Spring Security configuration class.
- * Configures authentication, authorization rules, password encoding, and CORS
- * settings.
+ * Uses TourmateService to fetch user data, configure authentication, CORS, and
+ * security rules.
  */
 @Configuration
 @ConfigurationProperties(prefix = "cors")
@@ -39,12 +36,12 @@ public class SecurityConfig {
     this.allowedOrigins = allowedOrigins;
   }
 
-  private final UserAccountRepository users;
+  private final TourmateService service;
 
-  public SecurityConfig(UserAccountRepository users) {
-    this.users = users;
+  // Inject the service instead of repository
+  public SecurityConfig(TourmateService service) {
+    this.service = service;
   }
-
 
   /**
    * Password encoder bean for hashing passwords.
@@ -57,15 +54,14 @@ public class SecurityConfig {
   }
 
   /**
-   * Loads user details from the database for authentication.
+   * Loads user details from the service for authentication.
    *
    * @return UserDetailsService to retrieve users
    */
   @Bean
   UserDetailsService userDetailsService() {
-    return username -> users.findById(username)
+    return username -> service.getUser(username)
         .map(u -> User.withUsername(u.getUsername())
-            // use the correct field of your entity (e.g. getPasswordHash())
             .password(u.getPasswordHash())
             .roles("USER")
             .build())

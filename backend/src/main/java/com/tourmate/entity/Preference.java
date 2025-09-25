@@ -1,10 +1,11 @@
 // Preference.java  --> tabella "preferences" con FK su users.username
-package com.example.tourmate;
+package com.tourmate.entity;
 
 import jakarta.persistence.*;
 
-import com.example.tourmate.converter.StringListConverter;
 import java.util.List;
+
+import com.tourmate.converter.StringListConverter;
 
 /**
  * JPA entity representing a user's preferences.

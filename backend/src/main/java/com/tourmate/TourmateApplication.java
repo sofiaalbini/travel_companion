@@ -1,5 +1,5 @@
 // TourmateApplication.java
-package com.example.tourmate;
+package com.tourmate;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

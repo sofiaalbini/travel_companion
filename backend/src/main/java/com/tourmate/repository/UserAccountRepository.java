@@ -1,8 +1,11 @@
 package com.tourmate.repository;
 
-import com.tourmate.UserAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.tourmate.entity.UserAccount;
+
+import java.util.List;
 
 /**
  * Repository interface for managing UserAccount entities.
@@ -10,5 +13,12 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface UserAccountRepository extends JpaRepository<UserAccount, String> {
-    // JpaRepository already provides save(), findById(), existsById(), etc.
+
+    /**
+     * Optional: find users by partial username (for search/autocomplete).
+     *
+     * @param keyword substring to search in username
+     * @return list of matching UserAccount entities
+     */
+    List<UserAccount> findByUsernameContaining(String keyword);
 }
