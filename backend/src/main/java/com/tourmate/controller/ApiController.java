@@ -3,102 +3,176 @@ package com.tourmate.controller;
 import com.tourmate.entity.UserAccount;
 import com.tourmate.entity.Preference;
 import com.tourmate.service.TourmateService;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Collections;
 
-/**
- * REST controller for authentication and managing user preferences.
- * Handles registration, current user info, and preference management.
- */
+
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+
+import jakarta.servlet.http.HttpSession;
+
+
 @RestController
 @RequestMapping("/api")
 public class ApiController {
 
-    @GetMapping("/ping")
-    public String ping() {
-        return "Backend is running 🚀";
-    }
-
     private final TourmateService service;
+    private final PasswordEncoder passwordEncoder;
+    private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
 
-    /**
-     * Constructor for ApiController.
-     *
-     * @param service the service layer for users and preferences
-     */
-    public ApiController(TourmateService service) {
+    public ApiController(TourmateService service, PasswordEncoder passwordEncoder) {
         this.service = service;
+        this.passwordEncoder = passwordEncoder;
     }
-
-    // ---------- AUTHENTICATION ----------
 
     public record RegisterRequest(String username, String password) {}
+    public record LoginRequest(String username, String password) {}
+    public record PrefRequest(List<String> preferences) {}
 
-    /**
-     * Registers a new user.
-     *
-     * @param r registration request containing username and password
-     * @return HTTP 200 if successful, 400 if username already exists
-     */
+    // ------------------- REGISTER -------------------
     @PostMapping("/auth/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest r) {
+        logger.info("Register attempt for username: {}", r.username());
+        
         if (service.userExists(r.username())) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
-        service.createUser(r.username(), r.password());
+        service.createUser(r.username(), passwordEncoder.encode(r.password()));
+        logger.info("User registered successfully: {}", r.username());
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Returns the currently authenticated user's username.
-     *
-     * @param me authenticated UserDetails
-     * @return the username of the logged-in user
-     */
-    @GetMapping("/auth/me")
-    public ResponseEntity<String> me(@AuthenticationPrincipal UserDetails me) {
-        return ResponseEntity.ok(me.getUsername());
-    }
-
-    // ---------- PREFERENCES (requires authentication) ----------
-
-    public record PrefRequest(List<String> preferences) {}
-
-    /**
-     * Adds preferences for the authenticated user.
-     *
-     * @param me authenticated UserDetails
-     * @param r preferences request
-     * @return saved Preference entity or 400 if empty
-     */
-    @PostMapping("/preferences")
-    public ResponseEntity<?> createPref(@AuthenticationPrincipal UserDetails me,
-                                        @RequestBody PrefRequest r) {
-        if (r.preferences() == null || r.preferences().isEmpty()) {
-            return ResponseEntity.badRequest().body("At least one preference must be selected");
+    @PostMapping("/auth/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest r, HttpServletRequest request) {
+        logger.info("Login attempt for username: '{}'", r.username());
+        
+        // Trim whitespace from username
+        String trimmedUsername = r.username() != null ? r.username().trim() : "";
+        
+        Optional<UserAccount> userOpt = service.getUser(trimmedUsername);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found: '{}'", trimmedUsername);
+            return ResponseEntity.status(401).body("Invalid username or password");
         }
 
-        UserAccount u = service.getUser(me.getUsername()).orElseThrow();
-        Preference p = service.addPreferences(u, r.preferences());
+        UserAccount user = userOpt.get();
+        logger.debug("Found user: '{}', checking password", user.getUsername());
+        
+        if (!passwordEncoder.matches(r.password(), user.getPasswordHash())) {
+            logger.warn("Invalid password for user: '{}'", trimmedUsername);
+            return ResponseEntity.status(401).body("Invalid username or password");
+        }
 
+        logger.info("Password verified for user: '{}'", user.getUsername());
+
+        // Create Spring Security principal
+        UserDetails userDetails = User.withUsername(user.getUsername())
+                                      .password(user.getPasswordHash())
+                                      .roles("USER")
+                                      .build();
+
+        // Set authentication in SecurityContext
+        UsernamePasswordAuthenticationToken authToken =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+
+        // Persist SecurityContext in session
+        HttpSession session = request.getSession(true);
+        session.setAttribute(
+            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+            SecurityContextHolder.getContext()
+        );
+        
+        logger.info("Session created for user: '{}', session ID: {}", user.getUsername(), session.getId());
+        
+        return ResponseEntity.ok(user.getUsername());
+    }
+
+    // ------------------- CURRENT USER -------------------
+    @GetMapping("/auth/me")
+    public ResponseEntity<String> me(@AuthenticationPrincipal UserDetails user, HttpServletRequest request) {
+        logger.debug("Me endpoint called");
+        
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            logger.debug("Session found: {}", session.getId());
+        } else {
+            logger.debug("No session found");
+        }
+        
+        if (user == null) {
+            logger.warn("No authenticated user found");
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+        
+        logger.debug("Authenticated user: {}", user.getUsername());
+        return ResponseEntity.ok(user.getUsername());
+    }
+
+    // ------------------- LOGOUT -------------------
+    @PostMapping("/auth/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            logger.info("Invalidating session: {}", session.getId());
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok("Logged out successfully");
+    }
+
+    // ------------------- PREFERENCES -------------------
+    @PostMapping("/preferences")
+    public ResponseEntity<?> addOrUpdatePreferences(@AuthenticationPrincipal UserDetails user,
+                                                   @RequestBody PrefRequest r) {
+        if (user == null) return ResponseEntity.status(401).body("Not logged in");
+        if (r.preferences() == null || r.preferences().isEmpty())
+            return ResponseEntity.badRequest().body("Select at least one preference");
+
+        logger.info("Adding/updating preferences for user: {}", user.getUsername());
+        
+        UserAccount u = service.getUser(user.getUsername()).orElseThrow();
+        
+        // Check if this is an update or new creation
+        List<Preference> existingPrefs = service.getPreferences(u);
+        if (!existingPrefs.isEmpty()) {
+            logger.info("Updating existing preferences for user: {}", user.getUsername());
+        } else {
+            logger.info("Creating new preferences for user: {}", user.getUsername());
+        }
+        
+        Preference p = service.addOrUpdatePreferences(u, r.preferences());
         return ResponseEntity.ok(p);
     }
 
-    /**
-     * Retrieves preferences of the authenticated user.
-     *
-     * @param me authenticated UserDetails
-     * @return list of Preference entities
-     */
-    @GetMapping("/preferences")
-    public List<Preference> myPrefs(@AuthenticationPrincipal UserDetails me) {
-        UserAccount u = service.getUser(me.getUsername()).orElseThrow();
-        return service.getPreferences(u);
-        
-        
+@GetMapping("/preferences")
+public ResponseEntity<?> getPreferences(@AuthenticationPrincipal UserDetails user) {
+    if (user == null) return ResponseEntity.status(401).body("Not logged in");
+    
+    UserAccount u = service.getUser(user.getUsername()).orElseThrow();
+    List<Preference> preferences = service.getPreferences(u);
+
+    if (!preferences.isEmpty()) {
+        // Return only the stored list of preferences
+        return ResponseEntity.ok(preferences.get(0).getPreferences());
+    } else {
+        return ResponseEntity.ok(Collections.emptyList());
     }
 }
+}
+

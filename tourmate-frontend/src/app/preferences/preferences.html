@@ -1,0 +1,31 @@
+<div class="card">
+  <h2>Welcome, {{ user || 'User' }}</h2>
+  <app-notification></app-notification>
+
+  <section class="current-prefs">
+    <h3>Your Preferences</h3>
+    @if (currentPrefs.length > 0) {
+    <p>{{ currentPrefs.join(', ') }}</p>
+    } @else {
+    <p>No preferences set yet.</p>
+    }
+  </section>
+
+  <section class="choose-prefs">
+    <h3>Choose Preferences</h3>
+    <div class="prefs">
+      @for (p of availablePrefs; track p) {
+      <label class="pref">
+        <input type="checkbox" [checked]="selected.includes(p)" (change)="toggle(p)" />
+        {{ p }}
+      </label>
+      }
+
+    </div>
+
+    <div class="actions">
+      <button (click)="save()" [disabled]="loading">Save Preferences</button>
+      <button (click)="logout()" class="logout">Logout</button>
+    </div>
+  </section>
+</div>

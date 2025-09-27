@@ -10,18 +10,18 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "users")
 public class UserAccount {
-  @Id
-  @Column(length = 50, nullable = false, unique = true)
-  private String username;
-
-  @Column(nullable = false, name = "password_hash")
-  private String passwordHash;
-
-  /**
-   * Default constructor required by JPA.
-   */
-  public UserAccount() {
-  }
+   @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;  
+    
+    @Column(unique = true, nullable = false)
+    private String username;  // Username is unique but not PK
+    
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+    
+    // Constructors
+    public UserAccount() {}
 
   /**
    * Constructs a UserAccount with a username and hashed password.
@@ -33,6 +33,11 @@ public class UserAccount {
     this.username = username;
     this.passwordHash = passwordHash;
   }
+
+
+   public Long getId() {
+        return id;
+    }
 
   public String getUsername() {
     return username;

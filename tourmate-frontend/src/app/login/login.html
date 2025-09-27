@@ -1,0 +1,21 @@
+<div class="card">
+  <h2>Login</h2>
+  <app-notification></app-notification>
+  <form (ngSubmit)="login()">
+    <div class="field">
+      <p>Username</p>
+      <input type="text" [(ngModel)]="username" name="username" required />
+    </div>
+
+    <div class="field">
+     <p>Password</p>
+      <input type="password" [(ngModel)]="password" name="password" required />
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="loading">Login</button>
+      <a routerLink="/register" class="link">Register</a>
+    </div>
+  </form>
+</div>
+

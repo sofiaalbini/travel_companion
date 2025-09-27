@@ -1,12 +1,18 @@
 package com.tourmate.service;
 
 import com.tourmate.entity.UserAccount;
+// import com.tourmate.controller.ApiController;
 import com.tourmate.entity.Preference;
 import com.tourmate.repository.PreferenceRepository;
 import com.tourmate.repository.UserAccountRepository;
+
+// import org.slf4j.Logger;
+// import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
+
+
 
 /**
  * Service layer for managing users and their preferences.
@@ -14,85 +20,86 @@ import java.util.Optional;
  */
 @Service
 public class TourmateService {
+    //  private static final Logger logger = LoggerFactory.getLogger(TourmateService.class);
 
-    private final UserAccountRepository users;
-    private final PreferenceRepository prefs;
 
-    /**
-     * Constructor for TourmateService.
-     *
-     * @param users repository for UserAccount entities
-     * @param prefs repository for Preference entities
-     */
-    public TourmateService(UserAccountRepository users, PreferenceRepository prefs) {
-        this.users = users;
-        this.prefs = prefs;
+   private final UserAccountRepository userRepository;
+    private final PreferenceRepository preferenceRepository;
+
+    public TourmateService(UserAccountRepository userRepository, PreferenceRepository preferenceRepository) {
+        this.userRepository = userRepository;
+        this.preferenceRepository = preferenceRepository;
     }
+
+    // /**
+    //  * Constructor for TourmateService.
+    //  *
+    //  * @param users repository for UserAccount entities
+    //  * @param prefs repository for Preference entities
+    //  */
+    // public TourmateService(UserAccountRepository users, PreferenceRepository prefs) {
+    //     this.users = users;
+    //     this.prefs = prefs;
+    // }
 
     // ---------- USERS ----------
-
-    /**
-     * Creates a new user in the system.
-     *
-     * @param username the username of the new user
-     * @param hashedPassword the hashed password
-     * @return the saved UserAccount entity
-     */
-    public UserAccount createUser(String username, String hashedPassword) {
-        UserAccount user = new UserAccount(username, hashedPassword);
-        return users.save(user);
+ public boolean userExists(String username) {
+        try {
+            return userRepository.existsByUsername(username);
+        } catch (Exception e) {
+           // logger.error("Error checking if user exists: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
-    /**
-     * Retrieves a user by username.
-     *
-     * @param username the username to search for
-     * @return an Optional containing the UserAccount if found
-     */
+    public UserAccount createUser(String username, String passwordHash) {
+        try {
+            //logger.info("Creating user: '{}'", username);
+            
+            UserAccount user = new UserAccount();
+            user.setUsername(username);
+            user.setPasswordHash(passwordHash);
+            
+            UserAccount savedUser = userRepository.save(user);
+           // logger.info("User created successfully with ID: {}", savedUser.getId());
+            
+            return savedUser;
+        } catch (Exception e) {
+           // logger.error("Error creating user '{}': {}", username, e.getMessage(), e);
+            throw e;
+        }
+    }
+
     public Optional<UserAccount> getUser(String username) {
-        return users.findById(username);
+        try {
+            return userRepository.findByUsername(username);
+        } catch (Exception e) {
+            //logger.error("Error getting user '{}': {}", username, e.getMessage(), e);
+            throw e;
+        }
     }
 
-    /**
-     * Checks if a user exists by username.
-     *
-     * @param username the username to check
-     * @return true if user exists, false otherwise
-     */
-    public boolean userExists(String username) {
-        return users.existsById(username);
+    public Preference addOrUpdatePreferences(UserAccount user, List<String> preferences) {
+    // Find existing preferences for this user (should be max 1 row)
+    List<Preference> existingPrefs = preferenceRepository.findByUser(user);
+
+    Preference pref;
+    if (!existingPrefs.isEmpty()) {
+        // Update the existing one
+        pref = existingPrefs.get(0);
+        pref.setPreferences(preferences);
+    } else {
+        // Create a new one
+        pref = new Preference();
+        pref.setUser(user);
+        pref.setPreferences(preferences);
     }
 
-    // ---------- PREFERENCES ----------
+    return preferenceRepository.save(pref);
+}
 
-    /**
-     * Adds a list of preferences to a user.
-     *
-     * @param user the user to add preferences for
-     * @param preferences list of preference strings
-     * @return the saved Preference entity
-     */
-    public Preference addPreferences(UserAccount user, List<String> preferences) {
-        Preference pref = new Preference(user, preferences);
-        return prefs.save(pref);
-    }
 
-    /**
-     * Retrieves all preferences for a user.
-     *
-     * @param user the user to fetch preferences for
-     * @return list of Preference entities
-     */
     public List<Preference> getPreferences(UserAccount user) {
-        return prefs.findByUser(user);
-    }
-
-    /**
-     * Deletes all preferences for a user.
-     *
-     * @param user the user whose preferences will be deleted
-     */
-    public void resetPreferences(UserAccount user) {
-        prefs.deleteByUser(user);
+        return preferenceRepository.findByUser(user);
     }
 }

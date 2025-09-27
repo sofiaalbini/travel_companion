@@ -13,14 +13,19 @@ import com.tourmate.converter.StringListConverter;
  * options.
  */
 @Entity
-@Table(name = "preferences")
+// @Table(name = "preferences")
+@Table(name = "preferences", uniqueConstraints = @UniqueConstraint(columnNames = "user_username"))
 public class Preference {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(optional = false, fetch = FetchType.LAZY)
-  @JoinColumn(name = "username", referencedColumnName = "username", nullable = false)
+  // @ManyToOne(optional = false, fetch = FetchType.LAZY)
+  // @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+  // private UserAccount user;
+
+  @OneToOne(optional = false, fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", unique = true, nullable = false)
   private UserAccount user;
 
   @Column(name = "preferences", columnDefinition = "TEXT", nullable = false)
@@ -34,11 +39,11 @@ public class Preference {
   }
 
   /**
-     * Constructs a Preference for a user with a list of selected options.
-     *
-     * @param user the owner of the preferences
-     * @param preferences list of selected preference strings
-     */
+   * Constructs a Preference for a user with a list of selected options.
+   *
+   * @param user        the owner of the preferences
+   * @param preferences list of selected preference strings
+   */
   public Preference(UserAccount user, List<String> preferences) {
     this.user = user;
     this.preferences = preferences;
