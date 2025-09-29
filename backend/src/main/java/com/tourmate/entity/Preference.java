@@ -1,44 +1,73 @@
-// Preference.java  --> tabella "preferences" con FK su users.username
+// Preference.java
 package com.tourmate.entity;
 
 import jakarta.persistence.*;
-
 import java.util.List;
 
 import com.tourmate.converter.StringListConverter;
 
 /**
- * JPA entity representing a user's preferences.
- * Each Preference belongs to a UserAccount and stores a list of selected
- * options.
+ * JPA entity representing a user's preferences. Each Preference is linked to a
+ * single UserAccount and stores a list of selected options as strings.
+ *
+ * Table: "preferences" Columns: - id: primary key - user_id: foreign key
+ * referencing users.id - preferences: list of preference strings (stored as
+ * TEXT)
  */
 @Entity
 @Table(name = "preferences")
 public class Preference {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
 
-  @OneToOne(optional = false, fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", unique = true, nullable = false)
-  private UserAccount user;
+    /* Primary key of the Preference entity. */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    /* One-to-One relationship with UserAccount. */
+    @OneToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true, nullable = false)
+    private UserAccount user;
 
-  @Column(name = "preferences", columnDefinition = "TEXT", nullable = false)
-  @Convert(converter = StringListConverter.class)
-  private List<String> preferences;
+    /* List of user-selected preferences stored as strings. */
+    @Column(name = "preferences", columnDefinition = "TEXT", nullable = false)
+    @Convert(converter = StringListConverter.class)
+    private List<String> preferences;
 
-  public Preference() {}
+    /**
+     * Default constructor required by JPA.
+     */
+    public Preference() {
+    }
 
-  public Preference(UserAccount user, List<String> preferences) {
-    this.user = user;
-    this.preferences = preferences;
-  }
+    /**
+     * Constructs a Preference for a given user with a list of preferences.
+     *
+     * @param user the UserAccount this preference belongs to
+     * @param preferences list of strings representing user preferences
+     */
+    public Preference(UserAccount user, List<String> preferences) {
+        this.user = user;
+        this.preferences = preferences;
+    }
 
-  public Long getId() { return id; }
+    // getters and setters
+    
+    public Long getId() {
+        return id;
+    }
 
-  public UserAccount getUser() { return user; }
-  public void setUser(UserAccount user) { this.user = user; }
+    public UserAccount getUser() {
+        return user;
+    }
 
-  public List<String> getPreferences() { return preferences; }
-  public void setPreferences(List<String> preferences) { this.preferences = preferences; }
+    public void setUser(UserAccount user) {
+        this.user = user;
+    }
+
+    public List<String> getPreferences() {
+        return preferences;
+    }
+
+    public void setPreferences(List<String> preferences) {
+        this.preferences = preferences;
+    }
 }

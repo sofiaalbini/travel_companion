@@ -6,6 +6,10 @@ import { AuthService } from '../services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NotificationComponent } from '../shared/system_notification/notification.component';
 
+/**
+ * Component for the login page.
+ * Handles user authentication and session initialization.
+ */
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -14,14 +18,27 @@ import { NotificationComponent } from '../shared/system_notification/notificatio
   styleUrls: ['./login.css']
 })
 export class LoginComponent {
+  // Form fields bound to input values
   username = '';
   password = '';
+  
+  //Used to disable the submit button and show loading state while waiting for backend response.
   loading = false;
+
+  /** Reference to the notification component for showing messages */
   @ViewChild(NotificationComponent) notification!: NotificationComponent;
 
-  constructor(private api: ApiService, private auth: AuthService, private router: Router) {}
+  /**
+  * Creates the LoginComponent
+  * @param api Service for making API calls to the backend
+  * @param auth Service for handling authentication state in the frontend
+  * @param router Angular Router for navigation after login
+  */
+  constructor(private api: ApiService, private auth: AuthService, private router: Router) { }
 
+  /** Handles user login */
   login() {
+    // check for empty inputs
     if (!this.username || !this.password) {
       this.notification.showMessage('Please enter username and password', 'success');
       return;
@@ -30,18 +47,18 @@ export class LoginComponent {
     this.loading = true;
     console.log('Starting login process...');
 
+    // call API service to login
     this.api.login(this.username, this.password).subscribe({
       next: (username) => {
         console.log('Login succeeded, received username:', username);
-        
-        // Small delay to ensure session is properly set
+
+        // small delay to ensure session is properly set
         setTimeout(() => {
+          // fetch current user info
           this.api.me().subscribe({
-            next: (user) => {
-              console.log('Successfully fetched user:', user);
-              this.auth.setUser(user);
+            next: (username) => {
+              this.auth.setUser(username);
               this.router.navigate(['/preferences']);
-              this.loading = false;
             },
             error: (err: HttpErrorResponse) => {
               console.error('Error fetching user info:', err);
@@ -54,7 +71,7 @@ export class LoginComponent {
       error: (err: HttpErrorResponse) => {
         console.error('Login error:', err);
         this.loading = false;
-        
+
         if (err.status === 401) {
           this.notification.showMessage('Invalid username or password', 'error');
         } else if (err.status === 0) {

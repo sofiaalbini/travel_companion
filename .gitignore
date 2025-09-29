@@ -2,3 +2,5 @@ node_modules
 .angular
 target
 frontend_old
+target
+.vscode

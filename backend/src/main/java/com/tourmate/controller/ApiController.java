@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.security.Principal;
 import java.util.Collections;
 
 import org.springframework.security.core.userdetails.User;
@@ -25,29 +27,92 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 
 import jakarta.servlet.http.HttpSession;
 
+/**
+ * REST controller for Tourmate API. Handles user authentication (register,
+ * login, logout) and preferences (create, update, retrieve) under "/api". Uses
+ * {@link TourmateService} for business logic and {@link PasswordEncoder} for
+ * password handling.
+ */
 @RestController
 @RequestMapping("/api")
 public class ApiController {
 
+    /**
+     * Service layer for user and preference management.
+     */
     private final TourmateService service;
+
+    /**
+     * Bean for hashing and verifying passwords.
+     */
     private final PasswordEncoder passwordEncoder;
+    /**
+     * Logger for request and event tracing.
+     */
     private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
 
+    /**
+     * Constructs the ApiController with required dependencies.
+     *
+     * @param service TourmateService to handle business logic
+     * @param passwordEncoder PasswordEncoder bean for hashing/verifying
+     * passwords
+     */
     public ApiController(TourmateService service, PasswordEncoder passwordEncoder) {
         this.service = service;
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * DTO for user registration request.
+     *
+     * @param username the desired username
+     * @param password the raw password
+     */
     public record RegisterRequest(String username, String password) {
+
     }
 
+    /**
+     * DTO for user login request.
+     *
+     * @param username the username
+     * @param password the raw password
+     */
     public record LoginRequest(String username, String password) {
+
     }
 
+    /**
+     * DTO for preferences request.
+     *
+     * @param preferences list of selected preferences
+     */
     public record PrefRequest(List<String> preferences) {
+
     }
 
-    // ------------------- REGISTER -------------------
+    /**
+     * DTO for preference response.
+     *
+     * @param id the preference ID
+     * @param preferences list of selected preferences
+     */
+    public record PreferenceResponse(Long id, List<String> preferences) {
+
+        public static PreferenceResponse from(Preference p) {
+            return new PreferenceResponse(p.getId(), p.getPreferences());
+        }
+    }
+
+    // ---------- USERS ENDPOINTS----------
+    /**
+     * Registers a new user.
+     *
+     * @param r RegisterRequest containing username and raw password
+     * @return 201 Created if successful, 400 Bad Request if username already
+     * exists
+     */
     @PostMapping("/auth/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest r) {
         logger.info("Register attempt for username: {}", r.username());
@@ -60,6 +125,14 @@ public class ApiController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Authenticates a user and creates a session.
+     *
+     * @param r LoginRequest containing username and password
+     * @param request HttpServletRequest used to create session
+     * @return 200 OK with username if successful, 401 Unauthorized if
+     * credentials are invalid
+     */
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest r, HttpServletRequest request) {
         logger.info("Login attempt for username: '{}'", r.username());
@@ -83,18 +156,17 @@ public class ApiController {
 
         logger.info("Password verified for user: '{}'", user.getUsername());
 
-        // Create Spring Security principal
         UserDetails userDetails = User.withUsername(user.getUsername())
                 .password(user.getPasswordHash())
                 .roles("USER")
                 .build();
 
-        // Set authentication in SecurityContext
+        // set authentication in SecurityContext
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null,
                 userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authToken);
 
-        // Persist SecurityContext in session
+        // persist SecurityContext in session
         HttpSession session = request.getSession(true);
         session.setAttribute(
                 HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
@@ -105,7 +177,13 @@ public class ApiController {
         return ResponseEntity.ok(user.getUsername());
     }
 
-    // ------------------- CURRENT USER -------------------
+    /**
+     * Returns the currently authenticated user's username.
+     *
+     * @param user authenticated UserDetails injected by Spring Security
+     * @param request HttpServletRequest for session inspection
+     * @return 200 OK with username or 401 Unauthorized if not logged in
+     */
     @GetMapping("/auth/me")
     public ResponseEntity<String> me(@AuthenticationPrincipal UserDetails user, HttpServletRequest request) {
         logger.debug("Me endpoint called");
@@ -126,7 +204,13 @@ public class ApiController {
         return ResponseEntity.ok(user.getUsername());
     }
 
-    // ------------------- LOGOUT -------------------
+    /**
+     * Logs out the currently authenticated user by invalidating the session and
+     * clearing the SecurityContext.
+     *
+     * @param request HttpServletRequest used to access session
+     * @return 200 OK after successful logout
+     */
     @PostMapping("/auth/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
@@ -138,62 +222,92 @@ public class ApiController {
         return ResponseEntity.ok("Logged out successfully");
     }
 
-    // ------------------- PREFERENCES -------------------
+    // ---------- PREFERENCES ENDPOINTS ----------
+    /**
+     * Creates new preferences for the authenticated user. Returns 409 Conflict
+     * if preferences already exist.
+     *
+     * @param request PrefRequest containing list of preferences
+     * @param principal authenticated user principal
+     * @return 201 Created with PreferenceResponse, 400 if invalid input, 409 if
+     * preferences already exist
+     */
     @PostMapping("/preferences")
-    public ResponseEntity<?> createPreferences(@AuthenticationPrincipal UserDetails user,
-            @RequestBody PrefRequest r) {
-        if (user == null)
-            return ResponseEntity.status(401).body("Not logged in");
-        if (r.preferences() == null || r.preferences().isEmpty())
-            return ResponseEntity.badRequest().body("Select at least one preference");
+    public ResponseEntity<PreferenceResponse> createPreferences(@RequestBody PrefRequest request, Principal principal) {
+        logger.info("Creating preferences for user: {}", principal.getName());
 
-        logger.info("Creating preferences for user: {}", user.getUsername());
-
-        UserAccount u = service.getUser(user.getUsername()).orElseThrow();
-
-        // Check if preferences already exist, don’t allow creation
-        List<Preference> existingPrefs = service.getPreferences(u);
-        if (!existingPrefs.isEmpty()) {
-            return ResponseEntity.status(409).body("Preferences already exist. Use PUT to update.");
+        // Validate input
+        if (request.preferences() == null || request.preferences().isEmpty()) {
+            return ResponseEntity.badRequest().build();
         }
 
-        Preference p = service.createPreferences(u, r.preferences());
-        return ResponseEntity.status(201).body(p);
+        // Get the user first
+        UserAccount user = service.getUser(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if preferences already exist
+        if (service.getPreferenceForUser(user).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409 Conflict
+        }
+
+        // Create preferences
+        Preference pref = service.createPreferences(user, request.preferences());
+
+        return ResponseEntity.status(HttpStatus.CREATED) // 201 Created
+                .body(PreferenceResponse.from(pref));
     }
 
+    /**
+     * Updates existing preferences for the authenticated user. Returns 404 Not
+     * Found if no preferences exist yet.
+     *
+     * @param request PrefRequest containing updated list of preferences
+     * @param principal authenticated user principal
+     * @return 200 OK with updated PreferenceResponse, 400 if invalid input, 404
+     * if no preferences exist
+     */
     @PutMapping("/preferences")
-    public ResponseEntity<?> updatePreferences(@AuthenticationPrincipal UserDetails user,
-            @RequestBody PrefRequest r) {
-        if (user == null)
-            return ResponseEntity.status(401).body("Not logged in");
+    public ResponseEntity<PreferenceResponse> updatePreferences(@RequestBody PrefRequest request, Principal principal) {
+        logger.info("Updating preferences for user: {}", principal.getName());
 
-        UserAccount u = service.getUser(user.getUsername()).orElseThrow();
-        List<Preference> existingPrefs = service.getPreferences(u);
-
-        if (existingPrefs.isEmpty()) {
-            return ResponseEntity.status(404).body("No preferences found to update");
+        // Validate input
+        if (request.preferences() == null || request.preferences().isEmpty()) {
+            return ResponseEntity.badRequest().build();
         }
 
-        Preference pref = existingPrefs.get(0);
-        pref.setPreferences(r.preferences());
-        Preference updated = service.savePreferences(pref);
+        // Get the user first
+        UserAccount user = service.getUser(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return ResponseEntity.ok(updated);
+        try {
+            Preference pref = service.updatePreferences(user, request.preferences());
+            return ResponseEntity.ok(PreferenceResponse.from(pref));
+        } catch (RuntimeException e) {
+            // If preferences don't exist
+            return ResponseEntity.notFound().build(); // 404 Not Found
+        }
     }
 
+    /**
+     * Retrieves preferences for the authenticated user. Returns an empty list
+     * if no preferences have been set yet.
+     *
+     * @param principal authenticated user principal
+     * @return 200 OK with list of preference strings (empty if none exist)
+     */
     @GetMapping("/preferences")
-    public ResponseEntity<?> getPreferences(@AuthenticationPrincipal UserDetails user) {
-        if (user == null)
-            return ResponseEntity.status(401).body("Not logged in");
+    public ResponseEntity<List<String>> getPreferences(Principal principal) {
+        logger.info("Fetching preferences for user: {}", principal.getName());
 
-        UserAccount u = service.getUser(user.getUsername()).orElseThrow();
-        List<Preference> preferences = service.getPreferences(u);
+        UserAccount user = service.getUser(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!preferences.isEmpty()) {
-            // Return only the stored list of preferences
-            return ResponseEntity.ok(preferences.get(0).getPreferences());
-        } else {
+        Optional<Preference> preference = service.getPreferenceForUser(user);
+
+        if (preference.isEmpty()) {
             return ResponseEntity.ok(Collections.emptyList());
         }
+
+        return ResponseEntity.ok(preference.get().getPreferences());
     }
 }
