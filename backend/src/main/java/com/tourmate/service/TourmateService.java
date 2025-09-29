@@ -12,18 +12,17 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-
-
 /**
  * Service layer for managing users and their preferences.
- * Handles all business logic related to authentication, registration, and preferences.
+ * Handles all business logic related to authentication, registration, and
+ * preferences.
  */
 @Service
 public class TourmateService {
-    //  private static final Logger logger = LoggerFactory.getLogger(TourmateService.class);
+    // private static final Logger logger =
+    // LoggerFactory.getLogger(TourmateService.class);
 
-
-   private final UserAccountRepository userRepository;
+    private final UserAccountRepository userRepository;
     private final PreferenceRepository preferenceRepository;
 
     public TourmateService(UserAccountRepository userRepository, PreferenceRepository preferenceRepository) {
@@ -31,41 +30,31 @@ public class TourmateService {
         this.preferenceRepository = preferenceRepository;
     }
 
-    // /**
-    //  * Constructor for TourmateService.
-    //  *
-    //  * @param users repository for UserAccount entities
-    //  * @param prefs repository for Preference entities
-    //  */
-    // public TourmateService(UserAccountRepository users, PreferenceRepository prefs) {
-    //     this.users = users;
-    //     this.prefs = prefs;
-    // }
 
     // ---------- USERS ----------
- public boolean userExists(String username) {
+    public boolean userExists(String username) {
         try {
             return userRepository.existsByUsername(username);
         } catch (Exception e) {
-           // logger.error("Error checking if user exists: {}", e.getMessage(), e);
+            // logger.error("Error checking if user exists: {}", e.getMessage(), e);
             throw e;
         }
     }
 
     public UserAccount createUser(String username, String passwordHash) {
         try {
-            //logger.info("Creating user: '{}'", username);
-            
+            // logger.info("Creating user: '{}'", username);
+
             UserAccount user = new UserAccount();
             user.setUsername(username);
             user.setPasswordHash(passwordHash);
-            
+
             UserAccount savedUser = userRepository.save(user);
-           // logger.info("User created successfully with ID: {}", savedUser.getId());
-            
+            // logger.info("User created successfully with ID: {}", savedUser.getId());
+
             return savedUser;
         } catch (Exception e) {
-           // logger.error("Error creating user '{}': {}", username, e.getMessage(), e);
+            // logger.error("Error creating user '{}': {}", username, e.getMessage(), e);
             throw e;
         }
     }
@@ -74,30 +63,26 @@ public class TourmateService {
         try {
             return userRepository.findByUsername(username);
         } catch (Exception e) {
-            //logger.error("Error getting user '{}': {}", username, e.getMessage(), e);
+            // logger.error("Error getting user '{}': {}", username, e.getMessage(), e);
             throw e;
         }
     }
 
-    public Preference addOrUpdatePreferences(UserAccount user, List<String> preferences) {
-    // Find existing preferences for this user (should be max 1 row)
-    List<Preference> existingPrefs = preferenceRepository.findByUser(user);
 
-    Preference pref;
-    if (!existingPrefs.isEmpty()) {
-        // Update the existing one
-        pref = existingPrefs.get(0);
-        pref.setPreferences(preferences);
-    } else {
-        // Create a new one
-        pref = new Preference();
+    public Preference createPreferences(UserAccount user, List<String> preferences) {
+        Preference pref = new Preference();
         pref.setUser(user);
         pref.setPreferences(preferences);
+        return preferenceRepository.save(pref);
     }
 
-    return preferenceRepository.save(pref);
-}
+    public Optional<Preference> getPreferenceById(Long id) {
+        return preferenceRepository.findById(id);
+    }
 
+    public Preference savePreferences(Preference pref) {
+        return preferenceRepository.save(pref);
+    }
 
     public List<Preference> getPreferences(UserAccount user) {
         return preferenceRepository.findByUser(user);

@@ -20,12 +20,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Collections;
 
-
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
 import jakarta.servlet.http.HttpSession;
-
 
 @RestController
 @RequestMapping("/api")
@@ -40,15 +38,20 @@ public class ApiController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public record RegisterRequest(String username, String password) {}
-    public record LoginRequest(String username, String password) {}
-    public record PrefRequest(List<String> preferences) {}
+    public record RegisterRequest(String username, String password) {
+    }
+
+    public record LoginRequest(String username, String password) {
+    }
+
+    public record PrefRequest(List<String> preferences) {
+    }
 
     // ------------------- REGISTER -------------------
     @PostMapping("/auth/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest r) {
         logger.info("Register attempt for username: {}", r.username());
-        
+
         if (service.userExists(r.username())) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
@@ -60,10 +63,10 @@ public class ApiController {
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest r, HttpServletRequest request) {
         logger.info("Login attempt for username: '{}'", r.username());
-        
+
         // Trim whitespace from username
         String trimmedUsername = r.username() != null ? r.username().trim() : "";
-        
+
         Optional<UserAccount> userOpt = service.getUser(trimmedUsername);
         if (userOpt.isEmpty()) {
             logger.warn("User not found: '{}'", trimmedUsername);
@@ -72,7 +75,7 @@ public class ApiController {
 
         UserAccount user = userOpt.get();
         logger.debug("Found user: '{}', checking password", user.getUsername());
-        
+
         if (!passwordEncoder.matches(r.password(), user.getPasswordHash())) {
             logger.warn("Invalid password for user: '{}'", trimmedUsername);
             return ResponseEntity.status(401).body("Invalid username or password");
@@ -82,24 +85,23 @@ public class ApiController {
 
         // Create Spring Security principal
         UserDetails userDetails = User.withUsername(user.getUsername())
-                                      .password(user.getPasswordHash())
-                                      .roles("USER")
-                                      .build();
+                .password(user.getPasswordHash())
+                .roles("USER")
+                .build();
 
         // Set authentication in SecurityContext
-        UsernamePasswordAuthenticationToken authToken =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null,
+                userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authToken);
 
         // Persist SecurityContext in session
         HttpSession session = request.getSession(true);
         session.setAttribute(
-            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-            SecurityContextHolder.getContext()
-        );
-        
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                SecurityContextHolder.getContext());
+
         logger.info("Session created for user: '{}', session ID: {}", user.getUsername(), session.getId());
-        
+
         return ResponseEntity.ok(user.getUsername());
     }
 
@@ -107,19 +109,19 @@ public class ApiController {
     @GetMapping("/auth/me")
     public ResponseEntity<String> me(@AuthenticationPrincipal UserDetails user, HttpServletRequest request) {
         logger.debug("Me endpoint called");
-        
+
         HttpSession session = request.getSession(false);
         if (session != null) {
             logger.debug("Session found: {}", session.getId());
         } else {
             logger.debug("No session found");
         }
-        
+
         if (user == null) {
             logger.warn("No authenticated user found");
             return ResponseEntity.status(401).body("Not logged in");
         }
-        
+
         logger.debug("Authenticated user: {}", user.getUsername());
         return ResponseEntity.ok(user.getUsername());
     }
@@ -138,41 +140,60 @@ public class ApiController {
 
     // ------------------- PREFERENCES -------------------
     @PostMapping("/preferences")
-    public ResponseEntity<?> addOrUpdatePreferences(@AuthenticationPrincipal UserDetails user,
-                                                   @RequestBody PrefRequest r) {
-        if (user == null) return ResponseEntity.status(401).body("Not logged in");
+    public ResponseEntity<?> createPreferences(@AuthenticationPrincipal UserDetails user,
+            @RequestBody PrefRequest r) {
+        if (user == null)
+            return ResponseEntity.status(401).body("Not logged in");
         if (r.preferences() == null || r.preferences().isEmpty())
             return ResponseEntity.badRequest().body("Select at least one preference");
 
-        logger.info("Adding/updating preferences for user: {}", user.getUsername());
-        
+        logger.info("Creating preferences for user: {}", user.getUsername());
+
         UserAccount u = service.getUser(user.getUsername()).orElseThrow();
-        
-        // Check if this is an update or new creation
+
+        // Check if preferences already exist, don’t allow creation
         List<Preference> existingPrefs = service.getPreferences(u);
         if (!existingPrefs.isEmpty()) {
-            logger.info("Updating existing preferences for user: {}", user.getUsername());
-        } else {
-            logger.info("Creating new preferences for user: {}", user.getUsername());
+            return ResponseEntity.status(409).body("Preferences already exist. Use PUT to update.");
         }
-        
-        Preference p = service.addOrUpdatePreferences(u, r.preferences());
-        return ResponseEntity.ok(p);
+
+        Preference p = service.createPreferences(u, r.preferences());
+        return ResponseEntity.status(201).body(p);
     }
 
-@GetMapping("/preferences")
-public ResponseEntity<?> getPreferences(@AuthenticationPrincipal UserDetails user) {
-    if (user == null) return ResponseEntity.status(401).body("Not logged in");
-    
-    UserAccount u = service.getUser(user.getUsername()).orElseThrow();
-    List<Preference> preferences = service.getPreferences(u);
+    @PutMapping("/preferences")
+    public ResponseEntity<?> updatePreferences(@AuthenticationPrincipal UserDetails user,
+            @RequestBody PrefRequest r) {
+        if (user == null)
+            return ResponseEntity.status(401).body("Not logged in");
 
-    if (!preferences.isEmpty()) {
-        // Return only the stored list of preferences
-        return ResponseEntity.ok(preferences.get(0).getPreferences());
-    } else {
-        return ResponseEntity.ok(Collections.emptyList());
+        UserAccount u = service.getUser(user.getUsername()).orElseThrow();
+        List<Preference> existingPrefs = service.getPreferences(u);
+
+        if (existingPrefs.isEmpty()) {
+            return ResponseEntity.status(404).body("No preferences found to update");
+        }
+
+        Preference pref = existingPrefs.get(0);
+        pref.setPreferences(r.preferences());
+        Preference updated = service.savePreferences(pref);
+
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/preferences")
+    public ResponseEntity<?> getPreferences(@AuthenticationPrincipal UserDetails user) {
+        if (user == null)
+            return ResponseEntity.status(401).body("Not logged in");
+
+        UserAccount u = service.getUser(user.getUsername()).orElseThrow();
+        List<Preference> preferences = service.getPreferences(u);
+
+        if (!preferences.isEmpty()) {
+            // Return only the stored list of preferences
+            return ResponseEntity.ok(preferences.get(0).getPreferences());
+        } else {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
     }
 }
-}
-
