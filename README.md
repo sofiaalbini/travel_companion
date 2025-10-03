@@ -1,42 +1,47 @@
 # Tourmate
 
-**Tourmate** is a web application for managing travel preferences. Users can register, log in, and save their preferences. The backend is implemented in **Spring Boot** with **Spring Security** and **JPA**, while the frontend is built in **Angular 20**.
+**Tourmate** is a web application for managing travel preferences. Users can register, log in, and save their preferences.  
+
+- **Backend**: Spring Boot with Spring Security and JPA  
+- **Frontend**: Angular 20  
 
 ---
 
 ## Features
 
-- User registration and login with hashed passwords (BCrypt).  
-- Session management with Spring Security.  
-- Create, update, and view travel preferences.  
-- Frontend displays available preferences and supports selection toggling.  
-- System notifications for success/error messages.  
-- RESTful API with `/api` endpoints.  
+- User registration and login with hashed passwords (BCrypt)  
+- Session management with Spring Security  
+- Create, update, and view travel preferences  
+- Interactive frontend with preference selection toggling  
+- System notifications for success/error messages  
+- RESTful API with `/api` endpoints  
 
 ---
 
 ## Requirements
 
-- Java 17+  
-- Maven 3+  
-- Node.js 18+ / npm 9+  
-- Angular CLI 20+  
-- MySQL / PostgreSQL (or any database supported by Spring JPA)  
+- **Java** 17+  
+- **Maven** 3+  
+- **Node.js** 18+ / **npm** 9+  
+- **Angular CLI** 20+  
+- **Database**: MySQL / PostgreSQL (or any database supported by Spring JPA)  
 
 ---
 
-## Backend Setup
+## Quick Start
 
-1. Enter your database configuration in `backend/src/main/resources/application.properties`:
+### Backend Setup
 
-```bash
+1. Configure your database in `backend/src/main/resources/application.properties`:
+
+```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/tourmate
 spring.datasource.username=YOUR_DB_USER
 spring.datasource.password=YOUR_DB_PASSWORD
 spring.jpa.hibernate.ddl-auto=update
 ```
 
-2. Build and run backend:
+2. Build and run the backend:
 
 ```bash
 cd backend
@@ -44,14 +49,13 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-The backend API runs on http://localhost:8080/api.
+> Backend API is available at: [http://localhost:8080/api](http://localhost:8080/api)
 
+### Frontend Setup
 
-## Frontend Setup
+1. Configure Angular proxy (`proxy.conf.json`) to route API requests to the backend:
 
-1. Configure the proxy for Angular to route API requests to Spring Boot backend. Example proxy.conf.json:
-
-```bash
+```json
 {
   "/api": {
     "target": "http://localhost:8080",
@@ -61,44 +65,70 @@ The backend API runs on http://localhost:8080/api.
 }
 ```
 
-3. Run frontend:
+2. Install dependencies and run the frontend:
 
 ```bash
-cd tourmate_frontend
+cd frontend
 npm install
 ng serve --proxy-config proxy.conf.json
 ```
 
+> Frontend is accessible at: [http://localhost:4200](http://localhost:4200)
 
-3. Access the frontend at http://localhost:4200.
+---
 
 ## API Endpoints
+
 | Endpoint        | Method | Description                     |
 |-----------------|--------|---------------------------------|
-| /auth/register  | POST   | Register a new user             |
-| /auth/login     | POST   | Log in and create session       |
-| /auth/logout    | POST   | Log out and invalidate session  |
-| /auth/me        | GET    | Get current logged-in user      |
-| /preferences    | GET    | Get current user preferences    |
-| /preferences    | POST   | Create new preferences          |
-| /preferences    | PUT    | Update existing preferences     |
+| `/auth/register`  | POST   | Register a new user             |
+| `/auth/login`     | POST   | Log in and create session       |
+| `/auth/logout`    | POST   | Log out and invalidate session  |
+| `/auth/me`        | GET    | Get current logged-in user      |
+| `/preferences`    | GET    | Get current user preferences    |
+| `/preferences`    | POST   | Create new preferences          |
+| `/preferences`    | PUT    | Update existing preferences     |
 
+> **Note:** All `/preferences/**` endpoints require authentication.
 
+---
 
 ## Project Structure
 
+```
+backend/           # Spring Boot backend
+  ├─ src/main/java/com/tourmate
+  │   ├─ controller/   # API controllers
+  │   ├─ service/      # Business logic
+  │   ├─ repository/   # JPA repositories
+  │   ├─ entity/       # Entities (UserAccount, Preference)
+  │   └─ config/       # Security & CORS config
+  └─ src/main/resources
+      └─ application.properties
+
+tourmate_frontend/  # Angular frontend
+  ├─ src/app
+  │   ├─ services/        # API and auth services
+  │   ├─ components/      # UI components
+  │   └─ shared/          # Notifications, constants
+  └─ proxy.conf.json
+```
+
+---
 
 ## Security
-- Authentication: Spring Security with session-based authentication.
-- Password hashing: BCryptPasswordEncoder.
-- Authorization: /preferences/** endpoints require authentication.
-- CORS: Configured to allow frontend access during development.
 
-## Notes
-- Ensure the backend is running before the frontend.
-- System notifications are displayed for errors like invalid login or failed preference saving.
-- Session is stored using JSESSIONID cookie; frontend maintains user state via AuthService.
+- **Authentication:** Session-based via Spring Security  
+- **Password hashing:** BCryptPasswordEncoder  
+- **Authorization:** `/preferences/**` endpoints require authentication  
+- **CORS:** Configured to allow frontend access during development  
 
-1. Enter your DB configuration in backend\src\main\resources\application.properties
-2. To run backend:  mvn spring-boot:run
-3. To run frontend: ng serve --proxy-config proxy.conf.json
+---
+
+## Usage Notes
+
+- Ensure the backend is running before the frontend  
+- System notifications display errors such as invalid login or failed preference saving  
+- Session is stored using **JSESSIONID** cookie; frontend maintains user state via `AuthService`  
+
+

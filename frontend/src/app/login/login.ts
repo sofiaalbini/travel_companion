@@ -21,7 +21,7 @@ export class LoginComponent {
   // Form fields bound to input values
   username = '';
   password = '';
-  
+
   //Used to disable the submit button and show loading state while waiting for backend response.
   loading = false;
 
@@ -49,8 +49,8 @@ export class LoginComponent {
 
     // call API service to login
     this.api.login(this.username, this.password).subscribe({
-      next: (username) => {
-        console.log('Login succeeded, received username:', username);
+      next: () => {
+        console.log('Login succeeded, session created.');
 
         // small delay to ensure session is properly set
         setTimeout(() => {

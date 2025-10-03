@@ -110,7 +110,7 @@ public class ApiController {
      * Registers a new user.
      *
      * @param r RegisterRequest containing username and raw password
-     * @return 201 Created if successful, 400 Bad Request if username already
+     * @return 201 Created if successful, 409 if username already
      * exists
      */
     @PostMapping("/auth/register")
@@ -118,11 +118,12 @@ public class ApiController {
         logger.info("Register attempt for username: {}", r.username());
 
         if (service.userExists(r.username())) {
-            return ResponseEntity.badRequest().body("Username already exists");
-        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                             .body("Username already exists");
+    }
         service.createUser(r.username(), passwordEncoder.encode(r.password()));
         logger.info("User registered successfully: {}", r.username());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     /**
@@ -174,7 +175,8 @@ public class ApiController {
 
         logger.info("Session created for user: '{}', session ID: {}", user.getUsername(), session.getId());
 
-        return ResponseEntity.ok(user.getUsername());
+        // return ResponseEntity.ok(user.getUsername());
+        return ResponseEntity.ok().build();
     }
 
     /**

@@ -76,7 +76,7 @@ public class TourmateService {
         return savedPref;
     }
 
-    
+
     /**
      * Updates existing preferences for a user.
      *
