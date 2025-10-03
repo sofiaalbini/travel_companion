@@ -2,17 +2,19 @@
 package com.tourmate.entity;
 
 import jakarta.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
-import com.tourmate.converter.StringListConverter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 
 /**
- * JPA entity representing a user's preferences. Each Preference is linked to a
- * single UserAccount and stores a list of selected options as strings.
- *
- * Table: "preferences" Columns: - id: primary key - user_id: foreign key
- * referencing users.id - preferences: list of preference strings (stored as
- * TEXT)
+ * JPA entity representing a user's preferences. 
+ * * Table: "preferences" Columns: - id: primary key - user_id: foreign key
+ * referencing users.id - preferences: list of preference strings.
+ * Each Preference is linked to a single UserAccount and stores 
+ * a list of selected options as PostgreSQL array.
  */
 @Entity
 @Table(name = "preferences")
@@ -22,15 +24,16 @@ public class Preference {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    /* One-to-One relationship with UserAccount. */
+
+     /* One-to-One relationship with UserAccount. */
     @OneToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true, nullable = false)
     private UserAccount user;
 
-    /* List of user-selected preferences stored as strings. */
-    @Column(name = "preferences", columnDefinition = "TEXT", nullable = false)
-    @Convert(converter = StringListConverter.class)
-    private List<String> preferences;
+    /* List of user-selected preferences. */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "preferences", columnDefinition = "text[]", nullable = false)
+    private List<String> preferences = new ArrayList<>();;
 
     /**
      * Default constructor required by JPA.
@@ -46,7 +49,7 @@ public class Preference {
      */
     public Preference(UserAccount user, List<String> preferences) {
         this.user = user;
-        this.preferences = preferences;
+        this.preferences = preferences; 
     }
 
     // getters and setters
@@ -67,7 +70,7 @@ public class Preference {
         return preferences;
     }
 
-    public void setPreferences(List<String> preferences) {
-        this.preferences = preferences;
+   public void setPreferences(List<String> preferences) {
+        this.preferences = preferences != null ? preferences : new ArrayList<>();
     }
 }
